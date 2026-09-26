@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Moje Vesnice - Fullscreen</title>
+    <style>
+        body, html { 
+            margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; 
+            font-family: 'Segoe UI', sans-serif; background-color: #1a1a1a; color: white; 
+        }
+        
+        #profil-karta {
+            position: fixed; top: 20px; left: 20px; 
+            background-color: rgba(0, 0, 0, 0.8);
+            border: 2px solid #f1c40f; border-radius: 10px; padding: 15px;
+            display: flex; align-items: center; gap: 15px; z-index: 100; 
+            box-shadow: 0 0 15px rgba(0,0,0,0.7);
+        }
+        .profil-avatar { width: 60px; height: 60px; background-color: #34495e; border-radius: 5px; display: flex; justify-content: center; align-items: center; font-size: 40px; border: 2px solid #f39c12; }
+        .profil-info { text-align: left; }
+        #jmeno-hrace { font-size: 20px; font-weight: bold; color: #fff; margin-bottom: 5px; }
+        #networth { font-size: 14px; color: #f1c40f; }
+        .btn-edit { background: none; border: none; cursor: pointer; font-size: 16px; margin-left: 10px; }
+
+        .suroviny-lista {
+            position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+            background-color: rgba(44, 62, 80, 0.9); padding: 15px; border-radius: 10px;
+            border: 2px solid #f1c40f; font-size: 18px; font-weight: bold;
+            z-index: 100; box-shadow: 0 0 15px rgba(0,0,0,0.7); display: flex; gap: 15px; align-items: center;
+        }
+        .meny { color: #f1c40f; font-size: 20px; }
+
+        #herni-okno { position: absolute; width: 100vw; height: 100vh; top: 0; left: 0; overflow: hidden; cursor: grab; z-index: 1; }
+        #herni-okno:active { cursor: grabbing; }
+
+        /* MAPA S TEXTUROU */
+        #mapa {
+            width: 2000px; height: 2000px; position: absolute; top: 0; left: 0;
+            background-image: url('textury/mapa.jpg'); 
+            background-size: cover;
+            background-position: center;
+        }
+
+        /* VELKÉ A PŘEHLEDNÉ ŠTÍTKY BUDOV NA MAPĚ */
+        .budova-na-mape {
+            position: absolute; 
+            display: flex; 
+            align-items: center; 
+            gap: 16px;
+            background-color: rgba(0, 0, 0, 0.92);
+            border: 3px solid #f1c40f; 
+            border-radius: 45px; 
+            padding: 12px 22px 12px 12px;
+            box-shadow: 0 0 20px rgba(0,0,0,0.95);
+            z-index: 10; 
+            pointer-events: none;
+        }
+        
+        .budova-ikona {
+            width: 68px; height: 68px;
+            background-color: #8d6e63;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 38px;
+            border: 3px solid #f39c12;
+        }
+
+        .budova-info-mapa {
+            font-size: 19px;
+            font-weight: bold;
+            text-align: left;
+            line-height: 1.4;
+            color: #ffffff;
+        }
+        .budova-info-mapa span {
+            color: #f1c40f;
+        }
+        
+        /* PŘESNÉ POZICE BUDOV NA MAPĚ */
+        #drevorubec { 
+            top: 1320px; 
+            left: 1750px; 
+        }
+
+        #kamenolom { 
+            top: 1620px; 
+            left: 1250px; 
+            display: none; 
+        }
+
+        #trznice { 
+            top: 450px; 
+            left: 1100px; 
+            display: none; 
+        }
+
+        .dolni-panely { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 10px; align-items: center; z-index: 100; }
+        .panel { background-color: rgba(52, 73, 94, 0.9); padding: 15px; border-radius: 8px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; box-shadow: 0 0 15px rgba(0,0,0,0.7); }
+        button { padding: 8px 15px; font-weight: bold; cursor: pointer; border: none; border-radius: 5px; }
+        button:hover { filter: brightness(1.1); }
+        .btn-stavba { background-color: #2980b9; color: white; }
+        .btn-obchod { background-color: #f39c12; color: black; display: none; } 
+        .btn-upgrade { background-color: #27ae60; color: white; display: none; }
+    </style>
+</head>
+<body>
+
+    <div id="profil-karta">
+        <div class="profil-avatar">🧙‍♂️</div> 
+        <div class="profil-info">
+            <div id="jmeno-hrace">Neznámý Vládce</div>
+            <div id="networth">Networth: 0 💰</div>
+        </div>
+        <button class="btn-edit" onclick="zmenJmeno()">✏️</button>
+    </div>
+
+    <div class="suroviny-lista">
+        <span>🌲 <span id="drevo">0</span> (Lvl <span id="lvl-drevo">1</span>)</span>
+        <span>🪨 <span id="kamen">0</span> (Lvl <span id="lvl-kamen">0</span>)</span>
+        <span class="meny" id="penize-zobrazeni">0 💰 | 0 🥈 | 0 🥉</span>
+    </div>
+
+    <div id="herni-okno">
+        <div id="mapa">
+            <div id="drevorubec" class="budova-na-mape">
+                <div class="budova-ikona">🪓</div>
+                <div class="budova-info-mapa">Dřevorubec<br>Lvl <span id="map-lvl-drevo">1</span> (1 za 10s)</div>
+            </div>
+            
+            <div id="kamenolom" class="budova-na-mape">
+                <div class="budova-ikona" style="background-color: #7f8c8d;">⛏️</div>
+                <div class="budova-info-mapa">Kamenolom<br>Lvl <span id="map-lvl-kamen">0</span></div>
+            </div>
+            
+            <div id="trznice" class="budova-na-mape">
+                <div class="budova-ikona" style="background-color: #8e44ad;">⚖️</div>
+                <div class="budova-info-mapa">Tržnice</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dolni-panely">
+        <div class="panel" id="panel-stavba">
+            <button class="btn-stavba" id="btn-kamenolom" onclick="postavKamenolom()">Stavba: Důl (20 🌲)</button>
+            <button class="btn-stavba" id="btn-trznice" onclick="postavTrznici()">Stavba: Tržnice (50 🌲, 20 🪨)</button>
+            <button class="btn-obchod" id="obchod-drevo" onclick="prodejDrevo()">Prodat 1 🌲 (10 🥉)</button>
+            <button class="btn-obchod" id="obchod-kamen" onclick="prodejKamen()">Prodat 1 🪨 (50 🥉)</button>
+        </div>
+        <div class="panel" id="panel-vylepseni">
+            <button class="btn-upgrade" id="upg-drevo" style="display:inline-block;" onclick="vylepsiDrevo()">LvlUp Dřevo (<span id="cena-upg-drevo">1</span> 💰)</button>
+            <button class="btn-upgrade" id="upg-kamen" onclick="vylepsiKamen()">LvlUp Kámen (<span id="cena-upg-kamen">1</span> 💰)</button>
+        </div>
+    </div>
+
+    <script>
+        let jmenoHrace = "Neznámý Vládce";
+        let pocetDreva = 0;
+        let pocetKamene = 0;
+        let celkemMedaku = 0; 
+        let lvlDrevo = 1;
+        let lvlKamen = 0;
+        let cenaUpgDrevo = 1000;
+        let cenaUpgKamen = 1000;
+        let maTrznici = false;
+        
+        let casovacTazeni = 0; // Počítadlo sekund pro 10sekundový interval
+
+        function ulozHru() {
+            const data = {
+                jmeno: jmenoHrace, drevo: pocetDreva, kamen: pocetKamene,
+                medaky: celkemMedaku, lvlD: lvlDrevo, lvlK: lvlKamen,
+                cenaD: cenaUpgDrevo, cenaK: cenaUpgKamen, trznice: maTrznici
+            };
+            localStorage.setItem("vesnice_fullscreen", JSON.stringify(data));
+        }
+
+        function nactiHru() {
+            const ulozenaData = localStorage.getItem("vesnice_fullscreen");
+            if (ulozenaData) {
+                const data = JSON.parse(ulozenaData);
+                jmenoHrace = data.jmeno; pocetDreva = data.drevo; pocetKamene = data.kamen;
+                celkemMedaku = data.medaky; lvlDrevo = data.lvlD; lvlKamen = data.lvlK;
+                cenaUpgDrevo = data.cenaD; cenaUpgKamen = data.cenaK; maTrznici = data.trznice;
+
+                if (lvlKamen > 0) {
+                    document.getElementById("kamenolom").style.display = "flex";
+                    document.getElementById("btn-kamenolom").style.display = "none";
+                    document.getElementById("upg-kamen").style.display = "inline-block";
+                }
+                if (maTrznici) {
+                    document.getElementById("trznice").style.display = "flex";
+                    document.getElementById("btn-trznice").style.display = "none";
+                    document.getElementById("obchod-drevo").style.display = "inline-block";
+                    document.getElementById("obchod-kamen").style.display = "inline-block";
+                }
+            }
+        }
+
+        function zmenJmeno() {
+            let nove = prompt("Zadej jméno hrdiny:", jmenoHrace);
+            if (nove) { jmenoHrace = nove; aktualizujUI(); ulozHru(); }
+        }
+
+        function spocitejNetworth() {
+            let hodnotaSklad = (pocetDreva * 10) + (pocetKamene * 50);
+            return celkemMedaku + hodnotaSklad;
+        }
+
+        function zformatujPenize(pocet) {
+            let zlato = Math.floor(pocet / 1000);
+            let zbytek = pocet % 1000;
+            let stribro = Math.floor(zbytek / 100);
+            let med = zbytek % 100;
+            return `${zlato} 💰 | ${stribro} 🥈 | ${med} 🥉`;
+        }
+
+        function aktualizujUI() {
+            document.getElementById("drevo").innerText = pocetDreva;
+            document.getElementById("kamen").innerText = pocetKamene;
+            document.getElementById("penize-zobrazeni").innerText = zformatujPenize(celkemMedaku);
+            document.getElementById("lvl-drevo").innerText = lvlDrevo;
+            document.getElementById("lvl-kamen").innerText = lvlKamen;
+            document.getElementById("cena-upg-drevo").innerText = (cenaUpgDrevo / 1000).toFixed(1);
+            document.getElementById("cena-upg-kamen").innerText = (cenaUpgKamen / 1000).toFixed(1);
+            
+            document.getElementById("map-lvl-drevo").innerText = lvlDrevo;
+            document.getElementById("map-lvl-kamen").innerText = lvlKamen;
+            
+            document.getElementById("jmeno-hrace").innerText = jmenoHrace;
+            document.getElementById("networth").innerText = "Networth: " + zformatujPenize(spocitejNetworth());
+        }
+
+        function postavKamenolom() {
+            if (pocetDreva >= 20) { pocetDreva -= 20; lvlKamen = 1; document.getElementById("kamenolom").style.display = "flex"; document.getElementById("btn-kamenolom").style.display = "none"; document.getElementById("upg-kamen").style.display = "inline-block"; aktualizujUI(); ulozHru(); } else { alert("Nedostatek dřeva!"); }
+        }
+        function postavTrznici() {
+            if (pocetDreva >= 50 && pocetKamene >= 20) { pocetDreva -= 50; pocetKamene -= 20; maTrznici = true; document.getElementById("trznice").style.display = "flex"; document.getElementById("btn-trznice").style.display = "none"; document.getElementById("obchod-drevo").style.display = "inline-block"; document.getElementById("obchod-kamen").style.display = "inline-block"; aktualizujUI(); ulozHru(); } else { alert("Potřebuješ 50 dřeva a 20 kamene!"); }
+        }
+        function prodejDrevo() { if (pocetDreva >= 1) { pocetDreva -= 1; celkemMedaku += 10; aktualizujUI(); ulozHru(); } }
+        function prodejKamen() { if (pocetKamene >= 1) { pocetKamene -= 1; celkemMedaku += 50; aktualizujUI(); ulozHru(); } }
+        function vylepsiDrevo() { if (lvlDrevo >= 10) return; if (celkemMedaku >= cenaUpgDrevo) { celkemMedaku -= cenaUpgDrevo; lvlDrevo++; cenaUpgDrevo = Math.floor(cenaUpgDrevo * 1.5); aktualizujUI(); ulozHru(); } }
+        function vylepsiKamen() { if (lvlKamen >= 10) return; if (celkemMedaku >= cenaUpgKamen) { celkemMedaku -= cenaUpgKamen; lvlKamen++; cenaUpgKamen = Math.floor(cenaUpgKamen * 1.5); aktualizujUI(); ulozHru(); } }
+
+        const okno = document.getElementById('herni-okno');
+        const mapa = document.getElementById('mapa');
+        let jeTazeno = false, startX, startY, mapaX = -300, mapaY = -200; 
+
+        mapa.style.left = mapaX + 'px'; mapa.style.top = mapaY + 'px';
+
+        okno.addEventListener('mousedown', (e) => { jeTazeno = true; startX = e.clientX - mapaX; startY = e.clientY - mapaY; });
+        okno.addEventListener('mousemove', (e) => {
+            if (!jeTazeno) return;
+            e.preventDefault();
+            mapaX = e.clientX - startX; mapaY = e.clientY - startY;
+            
+            let maxPosX = window.innerWidth - 2000;
+            let maxPosY = window.innerHeight - 2000;
+            
+            mapaX = Math.min(0, Math.max(mapaX, maxPosX)); 
+            mapaY = Math.min(0, Math.max(mapaY, maxPosY));
+            
+            mapa.style.left = mapaX + 'px'; mapa.style.top = mapaY + 'px';
+        });
+        okno.addEventListener('mouseup', () => jeTazeno = false);
+        okno.addEventListener('mouseleave', () => jeTazeno = false);
+
+        nactiHru();
+        aktualizujUI();
+
+        // HERNÍ SMYČKA - Každou vteřinu přičte 1 k časovači
+        setInterval(function() {
+            casovacTazeni++;
+            if (casovacTazeni >= 10) {
+                casovacTazeni = 0;
+                pocetDreva += (lvlDrevo * 1);
+                if (lvlKamen > 0) {
+                    pocetKamene += (lvlKamen * 1);
+                }
+            }
+            aktualizujUI();
+            ulozHru();
+        }, 1000);
+    </script>
+
+</body>
+</html>
